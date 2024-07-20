@@ -40,16 +40,13 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        match self {
-            Self::Unauthorized => {
-                return (
-                    self.status_code(),
-                    [(WWW_AUTHENTICATE, "Token")],
-                    self.to_string(),
-                )
-                    .into_response();
-            }
-            _ => (),
+        if let Self::Unauthorized = self {
+            return (
+                self.status_code(),
+                [(WWW_AUTHENTICATE, "Token")],
+                self.to_string(),
+            )
+                .into_response();
         }
 
         (self.status_code(), self.to_string()).into_response()

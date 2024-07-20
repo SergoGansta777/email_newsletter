@@ -14,7 +14,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 
 ENV SQLX_OFFLINE true
-RUN cargo build --release --bin zero2prod
+RUN cargo build --release --bin newsletter_deliver
 
 # Runtime stage
 FROM debian:bookworm-slim AS runtime
@@ -26,7 +26,7 @@ RUN apt-get update -y \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/zero2prod zero2prod
+COPY --from=builder /app/target/release/newsletter_deliver newsletter_deliver
 COPY configuration configuration
 ENV APP_ENVIRONMENT production
-ENTRYPOINT ["./target/release/zero2prod"]
+ENTRYPOINT ["./target/release/newsletter_deliver"]

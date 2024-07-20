@@ -4,9 +4,16 @@ use anyhow::Context;
 use newsletter_deliverer::{configuration::get_configuration, run};
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
+use tracing_subscriber::fmt::format::FmtSpan;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenv::dotenv().ok();
+
+    tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::FULL)
+        .init();
+
     let configuration = get_configuration().expect("Failed to read configuration.");
     let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, configuration.application_port));
     let listener = TcpListener::bind(addr)

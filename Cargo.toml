@@ -14,12 +14,25 @@ name = "newsletter-deliverer"
 anyhow = "1.0.86"
 axum = "0.7.5"
 config = "0.14.0"
+dotenv = "0.15.0"
+env_logger = "0.11.3"
 hyper = "1.4.1"
 reqwest = { version = "0.12.5", features = ["json"] }
 serde = { version = "1.0.204", features = ["derive"] }
 serde_json = "1.0.120"
 thiserror = "1.0.63"
 tokio = { version = "1.38.1", features = ["full"] }
+tower = "0.4.13"
+tower-http = { version = "0.5.2", features = [
+    "catch-panic",
+    "compression-full",
+    "sensitive-headers",
+    "timeout",
+    "trace",
+    "cors",
+] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
 uuid = { version = "1.10.0", features = ["v4", "serde"] }
 
 [dependencies.sqlx]

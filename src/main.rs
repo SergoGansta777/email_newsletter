@@ -13,13 +13,13 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("Failed to bind to addr");
 
-    let db_pool = PgPoolOptions::new()
+    let connection_pool = PgPoolOptions::new()
         .max_connections(50)
         .connect(&configuration.database.connection_string())
         .await
         .context("Could not connect to database url")?;
 
-    run(listener, db_pool)
+    run(listener, connection_pool)
         .await
         .unwrap()
         .await

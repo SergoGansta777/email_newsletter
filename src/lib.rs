@@ -16,13 +16,16 @@ pub type Result<T, E = error::Error> = std::result::Result<T, E>;
 
 #[derive(Clone)]
 pub struct ApiContext {
-    db_pool: PgPool,
+    connection_pool: PgPool,
 }
 
-pub async fn run(listener: TcpListener, db_pool: PgPool) -> anyhow::Result<Serve<Router, Router>> {
-    let app_context = ApiContext { db_pool };
+pub async fn run(
+    listener: TcpListener,
+    connection_pool: PgPool,
+) -> anyhow::Result<Serve<Router, Router>> {
+    let app_context = ApiContext { connection_pool };
 
-    sqlx::migrate!().run(&app_context.db_pool).await?;
+    sqlx::migrate!().run(&app_context.connection_pool).await?;
 
     let app_router = Router::new()
         .route("/health_check", get(health_check))

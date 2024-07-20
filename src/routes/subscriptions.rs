@@ -25,7 +25,7 @@ pub async fn subscribe(
         payload.name,
         Utc::now()
     )
-    .execute(&ctx.db_pool)
+    .execute(&ctx.connection_pool)
     .await
     .context("Failed to execute subscribe sql script")?;
 

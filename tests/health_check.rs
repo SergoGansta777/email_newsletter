@@ -4,10 +4,14 @@ use std::{
 };
 
 use anyhow::Context;
-use newsletter_deliverer::{configuration::get_configuration, run};
+use newsletter_deliverer::{
+    configuration::{get_configuration, DatabaseSettings},
+    run,
+};
 use serde_json::json;
-use sqlx::{postgres::PgPoolOptions, Connection, PgConnection, PgPool};
+use sqlx::{Connection, PgConnection, PgPool};
 use tokio::net::TcpListener;
+use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
@@ -30,33 +34,6 @@ async fn health_check_works() {
     // Arange
     assert!(response.status().is_success());
     assert_eq!(Some(0), response.content_length());
-}
-
-/// Spin up an instance of application
-/// and returns its address (i.e. http://localhost:XXXX)
-async fn spawn_app() -> anyhow::Result<TestApp> {
-    let configuration = get_configuration().expect("Failed to read configuration.");
-
-    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 0));
-    let listener = TcpListener::bind(addr)
-        .await
-        .expect("Failed to bind to addr");
-    let port = listener.local_addr().unwrap().port();
-    let address = format!("http://127.0.0.1:{}", port);
-
-    let db_pool = PgPoolOptions::new()
-        .max_connections(50)
-        .connect(&configuration.database.connection_string())
-        .await
-        .context("Could not connect to database url")?;
-
-    let server = run(listener, db_pool.clone())
-        .await
-        .context("Failed to get server")?;
-
-    let _ = tokio::spawn(server.into_future());
-
-    Ok(TestApp { address, db_pool })
 }
 
 #[tokio::test]
@@ -124,4 +101,57 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
             error_message
         );
     }
+}
+
+/// Spin up an instance of application
+/// and returns its address (i.e. http://localhost:XXXX)
+async fn spawn_app() -> anyhow::Result<TestApp> {
+    let mut configuration = get_configuration().expect("Failed to read configuration.");
+    configuration.database.database_name = Uuid::new_v4().to_string();
+
+    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 0));
+    let listener = TcpListener::bind(addr)
+        .await
+        .expect("Failed to bind to addr");
+    let port = listener.local_addr().unwrap().port();
+    let address = format!("http://127.0.0.1:{}", port);
+
+    let connection_pool = configure_database(&configuration.database).await.unwrap();
+
+    let server = run(listener, connection_pool.clone())
+        .await
+        .context("Failed to get server")?;
+
+    let _ = tokio::spawn(server.into_future());
+
+    Ok(TestApp {
+        address,
+        db_pool: connection_pool,
+    })
+}
+
+pub async fn configure_database(config: &DatabaseSettings) -> anyhow::Result<PgPool> {
+    // Create database
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .context("Failed to connect to Postgres")?;
+
+    // Create the new database
+    let db_name = &config.database_name;
+    let create_db_query = format!(r#"CREATE DATABASE "{}""#, db_name);
+    sqlx::query(&create_db_query)
+        .execute(&mut connection)
+        .await
+        .context("Failed to create database")?;
+
+    // Migrate database
+    let connection_pool = PgPool::connect(&config.connection_string())
+        .await
+        .context("Failed to connect to Postgres.")?;
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate the database");
+
+    Ok(connection_pool)
 }

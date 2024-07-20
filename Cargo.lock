@@ -574,6 +574,8 @@ dependencies = [
  "axum",
  "hyper",
  "reqwest",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

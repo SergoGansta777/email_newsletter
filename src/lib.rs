@@ -1,18 +1,34 @@
-use axum::{http::StatusCode, response::Html, routing::get, serve::Serve, Router};
+use axum::{
+    http::StatusCode,
+    routing::{get, post},
+    serve::Serve,
+    Json, Router,
+};
+use serde::Deserialize;
 use tokio::net::TcpListener;
 
 pub async fn run(listener: TcpListener) -> anyhow::Result<Serve<Router, Router>> {
     let app = Router::new()
-        .route("/", get(get_hello_world))
-        .route("/health_check", get(health_check));
+        .route("/health_check", get(health_check))
+        .route("/subscriptions", post(subscribe));
 
     Ok(axum::serve(listener, app))
 }
 
-async fn get_hello_world() -> Html<&'static str> {
-    Html("<h1>Hello World</h1>")
-}
-
 async fn health_check() -> StatusCode {
     StatusCode::OK
+}
+
+#[derive(Deserialize)]
+struct Subscription {
+    name: Option<String>,
+    email: Option<String>,
+}
+
+async fn subscribe(Json(payload): Json<Subscription>) -> StatusCode {
+    if payload.name.is_none() || payload.email.is_none() {
+        StatusCode::BAD_REQUEST
+    } else {
+        StatusCode::OK
+    }
 }

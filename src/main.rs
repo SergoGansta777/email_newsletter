@@ -1,8 +1,7 @@
-use std::net::{Ipv4Addr, SocketAddr};
-
 use anyhow::Context;
 use newsletter_deliverer::{configuration::get_configuration, run};
 use sqlx::postgres::PgPoolOptions;
+use std::net::{Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 use tracing_subscriber::fmt::format::FmtSpan;
 

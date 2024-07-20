@@ -103,6 +103,42 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     }
 }
 
+#[tokio::test]
+async fn subscribe_returns_a_400_when_field_are_present_but_empty() {
+    // Arrange
+    let app = spawn_app().await.unwrap();
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        (json!({"name": "Sergey", "email" : ""}), "email empty"),
+        (
+            json!({"name": "","email": "sergo777ser777@gmail.com"}),
+            "name empty",
+        ),
+        (
+            json!({"name": "Sergey","email": "defently-not-valid_email.com"}),
+            "invalid email",
+        ),
+    ];
+
+    for (body, description) in test_cases {
+        // Act
+        let response = client
+            .post(&format!("{}/subscriptions", &app.address))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+
+        // Assert
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            description
+        );
+    }
+}
+
 /// Spin up an instance of application
 /// and returns its address (i.e. http://localhost:XXXX)
 async fn spawn_app() -> anyhow::Result<TestApp> {

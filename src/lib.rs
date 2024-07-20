@@ -12,6 +12,7 @@ use tower_http::{
 };
 
 pub mod configuration;
+pub mod domain;
 pub mod error;
 pub mod routes;
 pub mod startup;

@@ -10,6 +10,7 @@ use newsletter_deliverer::{
 };
 use serde_json::json;
 use sqlx::{Connection, PgConnection, PgPool};
+use test_case::test_case;
 use tokio::net::TcpListener;
 use uuid::Uuid;
 
@@ -70,73 +71,62 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     assert_eq!(saved.name, "Sergey Nekhoroshev");
 }
 
+#[test_case(json!({"name": "Sergey"}), "missing the email"; "missing email")]
+#[test_case(json!({"email": "sergo777ser777@gmail.com"}), "missing the name"; "missing name")]
+#[test_case(json!({}), "missing both name and email"; "missing both")]
 #[tokio::test]
-async fn subscribe_returns_a_400_when_data_is_missing() {
+async fn subscribe_returns_a_400_when_data_is_missing(
+    invalid_body: serde_json::Value,
+    error_message: &str,
+) {
     // Arrange
     let app = spawn_app().await.unwrap();
     let client = reqwest::Client::new();
-    let test_cases = vec![
-        (json!({"name": "Sergey"}), "missing the email"),
-        (
-            json!({"email": "sergo777ser777@gmail.com"}),
-            "missing the name",
-        ),
-        (json!({}), "missing both name and email"),
-    ];
 
-    for (invalid_body, error_message) in test_cases {
-        // Act
-        let response = client
-            .post(&format!("{}/subscriptions", &app.address))
-            .json(&invalid_body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+    // Act
+    let response = client
+        .post(&format!("{}/subscriptions", &app.address))
+        .json(&invalid_body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
 
-        // Assert
-        assert_eq!(
-            422,
-            response.status().as_u16(),
-            "The API did not fail with 422 when the payload was {}.",
-            error_message
-        );
-    }
+    // Assert
+    assert_eq!(
+        422,
+        response.status().as_u16(),
+        "The API did not fail with 422 when the payload was {}.",
+        error_message
+    );
 }
 
+#[test_case(json!({"name": "Sergey", "email" : ""}), "empty email")]
+#[test_case(json!({"name": "","email": "sergo777ser777@gmail.com"}),  "empty name")]
+#[test_case(json!({"name": "Sergey","email": "defently-not-valid_email.com"}), "invalid email")]
 #[tokio::test]
-async fn subscribe_returns_a_400_when_field_are_present_but_empty() {
+async fn subscribe_returns_a_400_when_field_are_present_but_empty(
+    body: serde_json::Value,
+    description: &str,
+) {
     // Arrange
     let app = spawn_app().await.unwrap();
     let client = reqwest::Client::new();
-    let test_cases = vec![
-        (json!({"name": "Sergey", "email" : ""}), "email empty"),
-        (
-            json!({"name": "","email": "sergo777ser777@gmail.com"}),
-            "name empty",
-        ),
-        (
-            json!({"name": "Sergey","email": "defently-not-valid_email.com"}),
-            "invalid email",
-        ),
-    ];
 
-    for (body, description) in test_cases {
-        // Act
-        let response = client
-            .post(&format!("{}/subscriptions", &app.address))
-            .json(&body)
-            .send()
-            .await
-            .expect("Failed to execute request.");
+    // Act
+    let response = client
+        .post(&format!("{}/subscriptions", &app.address))
+        .json(&body)
+        .send()
+        .await
+        .expect("Failed to execute request.");
 
-        // Assert
-        assert_eq!(
-            400,
-            response.status().as_u16(),
-            "The API did not fail with 400 Bad Request when the payload was {}.",
-            description
-        );
-    }
+    // Assert
+    assert_eq!(
+        400,
+        response.status().as_u16(),
+        "The API did not fail with 400 Bad Request when the payload was {}.",
+        description
+    );
 }
 
 /// Spin up an instance of application

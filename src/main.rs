@@ -1,5 +1,8 @@
 use anyhow::Context;
-use newsletter_deliverer::{configuration::get_configuration, run};
+use newsletter_deliverer::{
+    configuration::{get_configuration, DatabaseSettings},
+    run,
+};
 use sqlx::postgres::PgPoolOptions;
 use std::net::{Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
@@ -19,16 +22,17 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("Failed to bind to addr");
 
-    let connection_pool = PgPoolOptions::new()
-        .max_connections(50)
-        .connect(&configuration.database.connection_string())
-        .await
-        .context("Could not connect to database url")?;
+    let connection_pool = get_connection_pool(&configuration.database);
+    let email_client = configuration.email_client.client();
 
-    run(listener, connection_pool)
+    run(listener, connection_pool, email_client)
         .await
         .unwrap()
         .await
         .context("Error running HTTP server")?;
     Ok(())
+}
+
+pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
+    PgPoolOptions::new().connect_lazy_with(configuration.with_db())
 }

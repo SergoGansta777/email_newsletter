@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use axum::{
     routing::{get, post},
     serve::Serve,
     Router,
 };
+use email_client::EmailClient;
 use routes::{health_check, subscribe};
 use sqlx::PgPool;
 use tokio::net::TcpListener;
@@ -13,6 +16,7 @@ use tower_http::{
 
 pub mod configuration;
 pub mod domain;
+pub mod email_client;
 pub mod error;
 pub mod routes;
 pub mod startup;
@@ -22,13 +26,18 @@ pub type Result<T, E = error::Error> = std::result::Result<T, E>;
 #[derive(Clone)]
 pub struct ApiContext {
     connection_pool: PgPool,
+    email_client: Arc<EmailClient>,
 }
 
 pub async fn run(
     listener: TcpListener,
     connection_pool: PgPool,
+    email_client: EmailClient,
 ) -> anyhow::Result<Serve<Router, Router>> {
-    let app_context = ApiContext { connection_pool };
+    let app_context = ApiContext {
+        connection_pool,
+        email_client: Arc::new(email_client),
+    };
 
     sqlx::migrate!().run(&app_context.connection_pool).await?;
 

@@ -38,7 +38,7 @@ async fn health_check_works() {
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_200_for_valid_form_data() {
+async fn subscribe_returns_a_200_for_valid_data() {
     // Arrange
     let app = spawn_app().await.unwrap();
     let configuration = get_configuration().expect("Failed to read configuration");
@@ -158,9 +158,9 @@ async fn spawn_app() -> anyhow::Result<TestApp> {
 
 pub async fn configure_database(config: &DatabaseSettings) -> anyhow::Result<PgPool> {
     // Create database
-    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+    let mut connection = PgConnection::connect_with(&config.without_db())
         .await
-        .context("Failed to connect to Postgres")?;
+        .expect("Failed to connect to Postgres");
 
     // Create the new database
     let db_name = &config.database_name;
@@ -171,9 +171,9 @@ pub async fn configure_database(config: &DatabaseSettings) -> anyhow::Result<PgP
         .context("Failed to create database")?;
 
     // Migrate database
-    let connection_pool = PgPool::connect(&config.connection_string())
+    let connection_pool = PgPool::connect_with(config.with_db())
         .await
-        .context("Failed to connect to Postgres.")?;
+        .expect("Failed to connect to Postgres.");
     sqlx::migrate!("./migrations")
         .run(&connection_pool)
         .await

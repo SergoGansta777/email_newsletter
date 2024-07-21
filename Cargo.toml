@@ -52,3 +52,6 @@ features = [
 [dev-dependencies]
 claims = "0.7.1"
 fake = "2.9.2"
+quickcheck = "1.0.3"
+quickcheck_macros = "1.0.0"
+rand = "0.8.5"

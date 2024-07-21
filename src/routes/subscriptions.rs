@@ -1,4 +1,5 @@
-use axum::{extract::State, Json};
+use axum::{extract::State, response::IntoResponse, Json};
+use hyper::StatusCode;
 use serde::Deserialize;
 use sqlx::types::{chrono::Utc, Uuid};
 
@@ -17,15 +18,21 @@ pub struct Subscription {
 pub async fn subscribe(
     ctx: State<ApiContext>,
     Json(payload): Json<Subscription>,
-) -> Result<(), Error> {
-    let new_subscriber = NewSubscriber {
-        email: payload.email,
-        name: SubscriberName::parse(payload.name).expect("Subscriber name validation failed"),
+) -> impl IntoResponse {
+    let name = match SubscriberName::parse(payload.name) {
+        Ok(name) => name,
+        Err(_) => return StatusCode::BAD_REQUEST,
     };
 
-    insert_subscriber(new_subscriber, ctx).await?;
+    let new_subscriber = NewSubscriber {
+        email: payload.email,
+        name,
+    };
 
-    Ok(())
+    match insert_subscriber(new_subscriber, ctx).await {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }
 
 #[tracing::instrument(

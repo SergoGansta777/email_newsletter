@@ -19,21 +19,21 @@ pub async fn subscribe(
     ctx: State<ApiContext>,
     Json(payload): Json<Subscription>,
 ) -> impl IntoResponse {
-    let name = match SubscriberName::parse(payload.name) {
-        Ok(name) => name,
+    let new_subscriber = match parse_subscriber(payload) {
+        Ok(subscriber) => subscriber,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-    let email = match SubscriberEmail::parse(payload.email) {
-        Ok(email) => email,
-        Err(_) => return StatusCode::BAD_REQUEST,
-    };
-
-    let new_subscriber = NewSubscriber { email, name };
 
     match insert_subscriber(new_subscriber, ctx).await {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+pub fn parse_subscriber(subscripton: Subscription) -> Result<NewSubscriber, String> {
+    let name = SubscriberName::parse(subscripton.name)?;
+    let email = SubscriberEmail::parse(subscripton.email)?;
+    Ok(NewSubscriber { email, name })
 }
 
 #[tracing::instrument(

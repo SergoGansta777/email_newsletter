@@ -47,3 +47,6 @@ features = [
     "chrono",
     "migrate",
 ]
+
+[dev-dependencies]
+claims = "0.7.1"

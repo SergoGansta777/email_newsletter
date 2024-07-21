@@ -1,4 +1,3 @@
-use anyhow::Context;
 use axum::{extract::State, Json};
 use serde::Deserialize;
 use sqlx::types::{chrono::Utc, Uuid};
@@ -21,7 +20,7 @@ pub async fn subscribe(
 ) -> Result<(), Error> {
     let new_subscriber = NewSubscriber {
         email: payload.email,
-        name: SubscriberName::parse(payload.name),
+        name: SubscriberName::parse(payload.name).expect("Subscriber name validation failed"),
     };
 
     insert_subscriber(new_subscriber, ctx).await?;
@@ -29,6 +28,10 @@ pub async fn subscribe(
     Ok(())
 }
 
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(ctx, new_subscriber)
+)]
 async fn insert_subscriber(
     new_subscriber: NewSubscriber,
     ctx: State<ApiContext>,
@@ -45,6 +48,10 @@ async fn insert_subscriber(
     )
     .execute(&ctx.connection_pool)
     .await
-    .context("Failed to execute subscribe sql script")?;
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+
     Ok(())
 }

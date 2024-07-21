@@ -15,11 +15,21 @@ pub struct Subscription {
     pub email: String,
 }
 
+impl TryFrom<Subscription> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: Subscription) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(NewSubscriber { email, name })
+    }
+}
+
 pub async fn subscribe(
     ctx: State<ApiContext>,
     Json(payload): Json<Subscription>,
 ) -> impl IntoResponse {
-    let new_subscriber = match parse_subscriber(payload) {
+    let new_subscriber = match payload.try_into() {
         Ok(subscriber) => subscriber,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
@@ -28,12 +38,6 @@ pub async fn subscribe(
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
-}
-
-pub fn parse_subscriber(subscripton: Subscription) -> Result<NewSubscriber, String> {
-    let name = SubscriberName::parse(subscripton.name)?;
-    let email = SubscriberEmail::parse(subscripton.email)?;
-    Ok(NewSubscriber { email, name })
 }
 
 #[tracing::instrument(

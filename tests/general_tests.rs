@@ -71,9 +71,9 @@ async fn subscribe_returns_a_200_for_valid_data() {
     assert_eq!(saved.name, "Sergey Nekhoroshev");
 }
 
-#[test_case(json!({"name": "Sergey"}), "missing the email"; "missing email")]
-#[test_case(json!({"email": "sergo777ser777@gmail.com"}), "missing the name"; "missing name")]
-#[test_case(json!({}), "missing both name and email"; "missing both")]
+#[test_case(json!({"name": "Sergey"}), "missing the email")]
+#[test_case(json!({"email": "sergo777ser777@gmail.com"}), "missing the name")]
+#[test_case(json!({}), "missing both name and email")]
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing(
     invalid_body: serde_json::Value,
